@@ -1,0 +1,17 @@
+[Unit]
+Description=Argus Herald monitoring agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+# Adjust the path to wherever herald is published.
+ExecStart=/opt/argus-herald/Argus.Herald
+WorkingDirectory=/opt/argus-herald
+Restart=always
+RestartSec=5
+# Reading other services' logs/journal may require root or appropriate groups.
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,48 @@
+/* Global styles */
+@import "primeicons/primeicons.css";
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--p-content-background, #f8f9fa);
+  color: var(--p-text-color, #1f2937);
+}
+
+.muted { color: var(--p-text-muted-color, #6b7280); font-size: .85rem; }
+
+.page-head { margin-bottom: 1.25rem;
+  h2 { margin: .2rem 0; }
+}
+
+/* Fleet grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1rem 0;
+  .host-name { font-weight: 600; font-size: 1.05rem; text-decoration: none; color: var(--p-primary-color); }
+}
+.os { padding: 0 1rem .5rem; }
+
+.gauges { display: flex; gap: 1rem; align-items: center; }
+.gauge { text-align: center; }
+.gauge-label { margin-top: .25rem; font-size: .8rem; color: var(--p-text-muted-color); }
+.bars { flex: 1; display: flex; flex-direction: column; gap: .6rem; }
+.bar-label { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: .2rem; }
+
+/* Host detail */
+.detail-gauges { display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: stretch; }
+.detail-gauges .grow { flex: 1; }
+.detail-gauges .bar { margin-bottom: .75rem; }
+
+/* Logs */
+.filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1rem; }
+.filters .f { min-width: 11rem; }
+.filters .f-wide { min-width: 18rem; }
+.filters .tail { display: flex; align-items: center; gap: .5rem; }
+.logs-table .line { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; white-space: pre-wrap; }
+.logs-table .file { font-size: .78rem; color: var(--p-text-muted-color); overflow: hidden; text-overflow: ellipsis; max-width: 18rem; }

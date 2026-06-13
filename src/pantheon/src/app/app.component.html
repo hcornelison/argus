@@ -1,0 +1,14 @@
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◎</span> Argus
+  </div>
+  <nav>
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Fleet</a>
+    <a routerLink="/logs" routerLinkActive="active">Logs</a>
+    <a routerLink="/events" routerLinkActive="active">Events</a>
+  </nav>
+</header>
+
+<main>
+  <router-outlet></router-outlet>
+</main>

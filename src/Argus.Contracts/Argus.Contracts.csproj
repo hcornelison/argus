@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Generate BOTH client (herald) and server (styx) stubs from the shared contract. -->
+    <Protobuf Include="Protos\ingest.proto" GrpcServices="Both" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.30.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.70.0" PrivateAssets="All" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.70.0" />
+  </ItemGroup>
+
+</Project>

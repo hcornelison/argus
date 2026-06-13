@@ -1,0 +1,62 @@
+<div class="page">
+  <div class="page-head">
+    <a routerLink="/" class="muted">← Fleet</a>
+    <h2>Host #{{ hostId }}</h2>
+  </div>
+
+  @let m = metric();
+  <div class="detail-gauges">
+    <p-card>
+      <div class="gauge">
+        <p-knob [ngModel]="m?.cpuPercent ?? 0" [readonly]="true" [min]="0" [max]="100"
+                valueTemplate="{value}%" [size]="120"></p-knob>
+        <div class="gauge-label">CPU</div>
+      </div>
+    </p-card>
+
+    <p-card styleClass="grow">
+      <div class="bar">
+        <div class="bar-label">
+          <span>Memory</span>
+          <span class="muted">{{ m?.memoryUsedBytes | bytes }} / {{ m?.memoryTotalBytes | bytes }}</span>
+        </div>
+        <p-progressBar [value]="memPercent(m)"></p-progressBar>
+      </div>
+      @for (d of m?.disks ?? []; track d.mount) {
+        <div class="bar">
+          <div class="bar-label">
+            <span>{{ d.mount }}</span>
+            <span class="muted">{{ d.usedBytes | bytes }} / {{ d.totalBytes | bytes }}</span>
+          </div>
+          <p-progressBar [value]="d.totalBytes ? (d.usedBytes / d.totalBytes * 100) : 0"></p-progressBar>
+        </div>
+      }
+    </p-card>
+  </div>
+
+  <h3>Processes @if (snapshotAt()) {<span class="muted">at {{ snapshotAt() | date:'medium' }}</span>}</h3>
+  <p-table [value]="processes()" [paginator]="true" [rows]="15" [scrollable]="true"
+           sortField="cpuPercent" [sortOrder]="-1" styleClass="p-datatable-sm">
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="pid">PID</th>
+        <th pSortableColumn="name">Name</th>
+        <th pSortableColumn="cpuPercent">CPU %</th>
+        <th pSortableColumn="memoryBytes">Memory</th>
+        <th pSortableColumn="threadCount">Threads</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-p>
+      <tr>
+        <td>{{ p.pid }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.cpuPercent | number:'1.0-1' }}</td>
+        <td>{{ p.memoryBytes | bytes }}</td>
+        <td>{{ p.threadCount }}</td>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="emptymessage">
+      <tr><td colspan="5" class="muted">No process snapshot yet.</td></tr>
+    </ng-template>
+  </p-table>
+</div>

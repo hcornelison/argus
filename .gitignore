@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+*.user
+
+# Node / Angular
+node_modules/
+src/pantheon/dist/
+src/pantheon/.angular/
+
+# Herald local state
+herald-checkpoints.json
+
+# IDE / OS
+.vs/
+.idea/
+.DS_Store
