@@ -72,9 +72,10 @@ public class MacEventLogCollector : IEventLogCollector
 
     private static string Predicate(string minLevel) => minLevel switch
     {
-        "Critical" => "messageType == \"fault\"",
+        // macOS "error" type is extremely high-volume and mostly benign, so the standard
+        // severity tiers collect faults only. Opt into errors with Information/Verbose.
         "Information" or "Verbose" => "messageType == \"default\" OR messageType == \"info\" OR messageType == \"error\" OR messageType == \"fault\"",
-        _ => "messageType == \"error\" OR messageType == \"fault\"" // Error / Warning -> bounded
+        _ => "messageType == \"fault\"" // Critical / Error / Warning -> faults only
     };
 
     private static string LevelFromType(string? type) => type?.ToLowerInvariant() switch

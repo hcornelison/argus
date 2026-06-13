@@ -53,6 +53,7 @@ public class EventLogWorker : BackgroundService
                 var queryStart = DateTime.UtcNow;
 
                 var records = await _collector.CollectSinceAsync(since, ct);
+                records = Cap(records);
                 if (records.Count > 0)
                 {
                     if (!await ShipAsync(records, ct)) continue; // keep checkpoint; retry next tick
@@ -67,6 +68,15 @@ public class EventLogWorker : BackgroundService
             }
         }
         while (await timer.WaitForNextTickAsync(ct));
+    }
+
+    /// <summary>Keeps only the most recent N records when a cycle exceeds the configured cap.</summary>
+    private IReadOnlyList<EventLogRecord> Cap(IReadOnlyList<EventLogRecord> records)
+    {
+        var max = _options.MaxRecordsPerCycle;
+        if (max <= 0 || records.Count <= max) return records;
+        _logger.LogWarning("Event-log cycle produced {Total} records; capping to most recent {Max}", records.Count, max);
+        return records.Skip(records.Count - max).ToList(); // records are oldest-first
     }
 
     private DateTime GetCheckpoint()

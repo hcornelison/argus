@@ -9,6 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Allow running as a Windows Service (no-op when launched interactively / on other OSes).
+builder.Host.UseWindowsService(o => o.ServiceName = "Argus Styx");
+
 // --- Data layer (codex) ---
 builder.Services.AddCodex(builder.Configuration);
 

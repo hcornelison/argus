@@ -73,6 +73,12 @@ dotnet run --project src/Argus.Herald
 - **macOS:** `sudo deploy/herald/install-macos.sh` (publishes self-contained, installs a
   launchd daemon `com.argus.herald`).
 
+### Windows / IIS (styx + pantheon)
+
+See [deploy/iis/README.md](deploy/iis/README.md) — pantheon runs as an IIS site, styx runs as
+a Kestrel Windows Service that IIS reverse-proxies (gRPC isn't supported behind IIS). The UI
+supports light/dark mode (toggle in the top bar; defaults to the OS preference, persisted per browser).
+
 Edit the installed `appsettings.json` (`StyxGrpcEndpoint`, `ApiKey`, `LogPaths`) and restart.
 
 ## EF migrations

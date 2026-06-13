@@ -47,6 +47,14 @@ public class EventLogOptions
     /// <summary>
     /// On Linux/macOS, only collect entries at or above this severity to limit volume.
     /// One of: Verbose, Information, Warning, Error, Critical.
+    /// Note: macOS treats Warning/Error/Critical as fault-only, because the macOS "error"
+    /// message type is extremely high-volume and mostly benign; set Information to include it.
     /// </summary>
     public string MinLevel { get; set; } = "Warning";
+
+    /// <summary>
+    /// Safety cap on records shipped per collection cycle (most recent kept). Guards against
+    /// floods from very chatty hosts. 0 = unlimited.
+    /// </summary>
+    public int MaxRecordsPerCycle { get; set; } = 1000;
 }

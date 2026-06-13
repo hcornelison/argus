@@ -11,7 +11,8 @@ src/pantheon/.angular/
 # Herald local state
 herald-checkpoints.json
 
-# IDE / OS
+# IDE / OS / tooling
 .vs/
 .idea/
 .DS_Store
+.claude/

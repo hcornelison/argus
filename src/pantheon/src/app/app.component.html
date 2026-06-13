@@ -7,6 +7,10 @@
     <a routerLink="/logs" routerLinkActive="active">Logs</a>
     <a routerLink="/events" routerLinkActive="active">Events</a>
   </nav>
+  <p-button class="theme-toggle" [text]="true" [rounded]="true"
+            [icon]="theme.isDark() ? 'pi pi-sun' : 'pi pi-moon'"
+            (onClick)="theme.toggle()"
+            [ariaLabel]="theme.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"></p-button>
 </header>
 
 <main>
