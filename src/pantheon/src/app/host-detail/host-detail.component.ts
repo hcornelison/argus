@@ -10,6 +10,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { CardModule } from 'primeng/card';
 import { ArgusApiService } from '../core/argus-api.service';
 import { LiveService } from '../core/live.service';
+import { ThemeService } from '../core/theme.service';
 import { BytesPipe } from '../core/bytes.pipe';
 import { LiveMetric, ProcessInfo } from '../core/models';
 
@@ -23,6 +24,7 @@ export class HostDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private api = inject(ArgusApiService);
   private live = inject(LiveService);
+  readonly theme = inject(ThemeService);
   private subs: Subscription[] = [];
 
   hostId = 0;

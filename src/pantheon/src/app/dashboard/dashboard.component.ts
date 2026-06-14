@@ -22,9 +22,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private api = inject(ArgusApiService);
   private live = inject(LiveService);
   private sub?: Subscription;
+  private clockInterval?: ReturnType<typeof setInterval>;
 
   hosts = signal<Host[]>([]);
   metrics = signal<Record<number, LiveMetric>>({});
+  now = signal<number>(Date.now());
 
   ngOnInit(): void {
     this.api.getHosts().subscribe(async hosts => {
@@ -33,10 +35,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.metrics.update(cur => ({ ...cur, [m.hostId]: m })));
       for (const h of hosts) await this.live.subscribe(h.id);
     });
+    this.clockInterval = setInterval(() => this.now.set(Date.now()), 15_000);
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    clearInterval(this.clockInterval);
     this.hosts().forEach(h => this.live.unsubscribe(h.id));
   }
 
@@ -50,6 +54,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   isOnline(h: Host): boolean {
-    return Date.now() - new Date(h.lastSeenUtc).getTime() < 60_000;
+    const m = this.metrics()[h.id];
+    const ts = m?.timestampUtc ?? h.lastSeenUtc;
+    return this.now() - new Date(ts).getTime() < 90_000;
   }
 }

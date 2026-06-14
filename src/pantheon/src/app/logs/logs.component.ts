@@ -10,6 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ArgusApiService } from '../core/argus-api.service';
 import { LiveService } from '../core/live.service';
+import { ThemeService } from '../core/theme.service';
 import { Host, LogLine } from '../core/models';
 
 @Component({
@@ -21,6 +22,7 @@ import { Host, LogLine } from '../core/models';
 export class LogsComponent implements OnInit, OnDestroy {
   private api = inject(ArgusApiService);
   private live = inject(LiveService);
+  readonly theme = inject(ThemeService);
   private logSub?: Subscription;
 
   hosts = signal<Host[]>([]);
@@ -48,7 +50,7 @@ export class LogsComponent implements OnInit, OnDestroy {
       valueFormatter: (p: ValueFormatterParams) => p.value ? new Date(p.value).toLocaleString() : ''
     },
     { field: 'filePath', headerName: 'File', width: 260, cellClass: 'mono-cell' },
-    { field: 'line', headerName: 'Line', flex: 1, minWidth: 200, cellClass: 'mono-cell' },
+    { field: 'line', headerName: 'Line', flex: 1, minWidth: 200, cellClass: 'mono-cell', wrapText: true, autoHeight: true },
   ];
 
   ngOnInit(): void {

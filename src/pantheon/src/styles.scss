@@ -78,7 +78,8 @@ html, body {
 .detail-gauges .bar { margin-bottom: .75rem; }
 
 /* AG Grid cell overrides */
-.ag-theme-quartz-dark .mono-cell { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; }
+.ag-theme-quartz-dark .mono-cell,
+.ag-theme-quartz .mono-cell { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; }
 
 /* Logs */
 .filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-bottom: 1rem; }

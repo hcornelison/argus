@@ -36,7 +36,7 @@
 
   <h3>Processes @if (snapshotAt()) {<span class="muted">at {{ snapshotAt() | date:'medium' }}</span>}</h3>
   <ag-grid-angular
-    class="ag-theme-quartz-dark"
+    [class]="theme.isDark() ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'"
     style="width: 100%; height: 520px;"
     [rowData]="processes()"
     [columnDefs]="processCols"

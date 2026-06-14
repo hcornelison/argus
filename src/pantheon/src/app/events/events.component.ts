@@ -10,6 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ArgusApiService } from '../core/argus-api.service';
 import { LiveService } from '../core/live.service';
+import { ThemeService } from '../core/theme.service';
 import { EventLog, Host } from '../core/models';
 
 @Component({
@@ -21,6 +22,7 @@ import { EventLog, Host } from '../core/models';
 export class EventsComponent implements OnInit, OnDestroy {
   private api = inject(ArgusApiService);
   private live = inject(LiveService);
+  readonly theme = inject(ThemeService);
   private evtSub?: Subscription;
 
   hosts = signal<Host[]>([]);
@@ -62,7 +64,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     { field: 'channel', headerName: 'Channel', width: 170 },
     { field: 'source', headerName: 'Source', width: 150 },
     { field: 'eventId', headerName: 'ID', width: 70 },
-    { field: 'message', headerName: 'Message', flex: 1, minWidth: 200 },
+    { field: 'message', headerName: 'Message', flex: 1, minWidth: 200, wrapText: true, autoHeight: true },
   ];
 
   ngOnInit(): void {
