@@ -1,0 +1,105 @@
+# Argus dev/testing stack — full stack + 3 simulated herald worker nodes.
+#
+# Run from the repo root:
+#   docker compose -f deploy/docker-compose.dev.yml up -d --build
+#
+# styx REST+SignalR:  http://localhost:8080
+# styx gRPC ingest:  localhost:8081
+# pantheon UI:       http://localhost:4200
+#
+# Three herald containers register as distinct hosts in the fleet:
+#   worker-alpha, worker-beta, worker-gamma
+# worker-gamma mounts /var/log so it ships real container log files,
+# which exercises the Logs page with actual content.
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --loglevel warning
+    restart: unless-stopped
+
+  styx:
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: src/Argus.Styx/Dockerfile
+    depends_on:
+      - redis
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Argus: "Data Source=/data/argus.db"
+      Redis__ConnectionString: "redis:6379"
+      Retention__Days: "1"
+      Database__MigrateOnStartup: "true"
+    volumes:
+      - argus-sqlite:/data
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    restart: unless-stopped
+
+  pantheon:
+    build:
+      context: ../src/pantheon
+      dockerfile: Dockerfile
+    depends_on:
+      - styx
+    ports:
+      - "4200:80"
+    restart: unless-stopped
+
+  # --- Herald worker nodes ---
+
+  worker-alpha:
+    hostname: worker-alpha
+    build:
+      context: ..
+      dockerfile: src/Argus.Herald/Dockerfile
+    depends_on:
+      - styx
+    environment:
+      Herald__StyxGrpcEndpoint: "http://styx:8081"
+      Herald__MetricsIntervalSeconds: "5"
+      Herald__ProcessIntervalSeconds: "10"
+      Herald__MaxProcesses: "50"
+      Herald__EventLog__Enabled: "false"
+    restart: unless-stopped
+
+  worker-beta:
+    hostname: worker-beta
+    build:
+      context: ..
+      dockerfile: src/Argus.Herald/Dockerfile
+    depends_on:
+      - styx
+    environment:
+      Herald__StyxGrpcEndpoint: "http://styx:8081"
+      Herald__MetricsIntervalSeconds: "8"
+      Herald__ProcessIntervalSeconds: "15"
+      Herald__MaxProcesses: "50"
+      Herald__EventLog__Enabled: "false"
+    restart: unless-stopped
+
+  # worker-gamma ships real log files from /var/log inside its container,
+  # giving the Logs page real content to display.
+  worker-gamma:
+    hostname: worker-gamma
+    build:
+      context: ..
+      dockerfile: src/Argus.Herald/Dockerfile
+    depends_on:
+      - styx
+    environment:
+      Herald__StyxGrpcEndpoint: "http://styx:8081"
+      Herald__MetricsIntervalSeconds: "10"
+      Herald__ProcessIntervalSeconds: "20"
+      Herald__MaxProcesses: "50"
+      Herald__EventLog__Enabled: "false"
+      Herald__LogPaths__0: "/watch/logs"
+      Herald__LogFileFilter: "*.log"
+      Herald__CheckpointFile: "/tmp/herald-checkpoints.json"
+    volumes:
+      - /var/log:/watch/logs:ro
+    restart: unless-stopped
+
+volumes:
+  argus-sqlite:
