@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
+import { themeQuartz, colorSchemeDark, colorSchemeLight } from 'ag-grid-community';
 
 /**
  * Toggles light/dark mode by adding/removing the `.dark` class on <html>, which the
@@ -9,6 +10,11 @@ import { Injectable, signal } from '@angular/core';
 export class ThemeService {
   private static readonly KEY = 'argus-theme';
   readonly isDark = signal<boolean>(false);
+
+  /** AG Grid theme — reactive, use as [theme]="theme.gridTheme()" */
+  readonly gridTheme = computed(() =>
+    this.isDark() ? themeQuartz.withPart(colorSchemeDark) : themeQuartz.withPart(colorSchemeLight)
+  );
 
   /** Call once at app startup to apply the saved/preferred theme. */
   init(): void {
