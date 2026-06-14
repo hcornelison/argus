@@ -24,24 +24,15 @@
     </div>
   </div>
 
-  <p-table [value]="lines()" [paginator]="!liveTail" [rows]="50" [scrollable]="true" scrollHeight="60vh"
-           styleClass="p-datatable-sm logs-table">
-    <ng-template pTemplate="header">
-      <tr>
-        <th style="width:13rem">Time</th>
-        <th style="width:18rem">File</th>
-        <th>Line</th>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-l>
-      <tr>
-        <td class="muted">{{ l.timestampUtc | date:'medium' }}</td>
-        <td class="file" [title]="l.filePath">{{ l.filePath }}</td>
-        <td class="line">{{ l.line }}</td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr><td colspan="3" class="muted">No log lines in this window.</td></tr>
-    </ng-template>
-  </p-table>
+  <ag-grid-angular
+    class="ag-theme-quartz-dark"
+    style="width: 100%; height: 65vh;"
+    [rowData]="lines()"
+    [columnDefs]="logCols"
+    [defaultColDef]="defaultColDef"
+    [pagination]="!liveTail"
+    [paginationPageSize]="100"
+    [paginationPageSizeSelector]="[50, 100, 250, 500]"
+    [rowBuffer]="20"
+  />
 </div>
