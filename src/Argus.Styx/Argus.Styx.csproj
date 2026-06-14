@@ -9,9 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.9" />
-    <!-- Lets styx run as a Windows Service (Kestrel); no-op when run interactively. -->
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
