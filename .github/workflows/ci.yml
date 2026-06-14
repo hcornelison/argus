@@ -5,6 +5,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   dotnet:
     name: Build .NET (herald / styx / codex / contracts)
