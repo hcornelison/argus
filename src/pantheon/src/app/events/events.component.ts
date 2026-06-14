@@ -95,7 +95,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.evtSub = undefined;
   }
 
-  severity(level: string): string {
+  severity(level: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
     switch (level) {
       case 'Critical':
       case 'Error': return 'danger';
