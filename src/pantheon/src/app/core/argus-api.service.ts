@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { EventLog, Host, LogLine, MetricsResponse, ProcessSnapshot } from './models';
+import { EventLog, Host, LogLine, MetricsResponse, ProcessHistoryPoint, ProcessSnapshot } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ArgusApiService {
@@ -13,8 +13,18 @@ export class ArgusApiService {
     return this.http.get<Host[]>(`${this.base}/hosts`);
   }
 
+  getHost(id: number): Observable<Host> {
+    return this.http.get<Host>(`${this.base}/hosts/${id}`);
+  }
+
   getMetrics(hostId: number, from?: Date, to?: Date): Observable<MetricsResponse> {
     return this.http.get<MetricsResponse>(`${this.base}/hosts/${hostId}/metrics`, { params: range(from, to) });
+  }
+
+  getProcessHistory(hostId: number, name: string, from?: Date, to?: Date): Observable<ProcessHistoryPoint[]> {
+    let params = range(from, to);
+    params = params.set('name', name);
+    return this.http.get<ProcessHistoryPoint[]>(`${this.base}/hosts/${hostId}/process-history`, { params });
   }
 
   getProcesses(hostId: number, at?: Date): Observable<ProcessSnapshot> {

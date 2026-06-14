@@ -130,6 +130,22 @@ public class RedisStreamService
             ParseTs(e["ts"]), e["file"]!, e["line"]!, e["level"]!)).ToList();
     }
 
+    public async Task<IReadOnlyList<ProcessHistoryPoint>> GetProcessHistoryAsync(
+        long hostId, string name, DateTime from, DateTime to)
+    {
+        var entries = await _db.StreamRangeAsync(ProcessesKey(hostId), ToStreamId(from), ToStreamId(to, end: true));
+        var results = new List<ProcessHistoryPoint>();
+        foreach (var e in entries)
+        {
+            var ts = ParseTs(e["ts"]);
+            var procs = JsonSerializer.Deserialize<ProcessPoint[]>((string)e["procs"]!)!;
+            var match = procs.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+                results.Add(new ProcessHistoryPoint(ts, match.CpuPercent, match.MemoryBytes, match.ThreadCount));
+        }
+        return results;
+    }
+
     public async Task<IReadOnlyList<string>> GetLogFilesAsync(long hostId)
     {
         var members = await _db.SetMembersAsync(LogFilesKey(hostId));

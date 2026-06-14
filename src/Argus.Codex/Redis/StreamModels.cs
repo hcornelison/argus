@@ -22,3 +22,5 @@ public record EventPoint(
     string Message);
 
 public record LogPoint(DateTime TimestampUtc, string FilePath, string Line, string Level);
+
+public record ProcessHistoryPoint(DateTime TimestampUtc, double CpuPercent, long MemoryBytes, int ThreadCount);
