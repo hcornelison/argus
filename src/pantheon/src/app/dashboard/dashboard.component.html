@@ -4,37 +4,51 @@
     <span class="muted">Live system pressure across all monitored hosts</span>
   </div>
 
+  <div class="toolbar">
+    <input pInputText type="text" placeholder="Search hosts…"
+           [ngModel]="search()" (ngModelChange)="search.set($event)"
+           class="search-input" />
+    <div class="view-toggle">
+      <button pButton icon="pi pi-th-large" [outlined]="viewMode() !== 'card'"
+              pTooltip="Card view" (click)="viewMode.set('card')"></button>
+      <button pButton icon="pi pi-list" [outlined]="viewMode() !== 'grid'"
+              pTooltip="Grid view" (click)="viewMode.set('grid')"></button>
+    </div>
+  </div>
+
   @if (hosts().length === 0) {
     <p class="muted">No hosts have reported yet. Start a herald agent pointed at styx.</p>
   }
 
-  <div class="grid">
-    @for (h of hosts(); track h.id) {
-      <p-card styleClass="host-card">
-        <ng-template pTemplate="header">
-          <div class="card-head">
-            <a [routerLink]="['/hosts', h.id]" class="host-name">{{ h.machineName }}</a>
-            <p-tag [value]="isOnline(h) ? 'online' : 'stale'"
-                   [severity]="isOnline(h) ? 'success' : 'warn'"></p-tag>
-          </div>
-          <div class="muted os">{{ h.operatingSystem }}</div>
-        </ng-template>
+  @if (viewMode() === 'card') {
+    <div class="grid">
+      @for (h of filteredHosts(); track h.id) {
+        <p-card styleClass="host-card">
+          <ng-template pTemplate="header">
+            <div class="card-head">
+              <a [routerLink]="['/hosts', h.id]" class="host-name">{{ h.machineName }}</a>
+              <p-tag [value]="isOnline(h) ? 'online' : 'stale'"
+                     [severity]="isOnline(h) ? 'success' : 'warn'"></p-tag>
+            </div>
+            <div class="muted os">{{ h.operatingSystem }}</div>
+          </ng-template>
 
-        @let m = metrics()[h.id];
-        <div class="gauges">
-          <div class="gauge">
-            <p-knob [ngModel]="m?.cpuPercent ?? 0" [readonly]="true" [min]="0" [max]="100"
-                    valueTemplate="{value}%" [size]="110"></p-knob>
-            <div class="gauge-label">CPU</div>
-          </div>
-
+          @let m = metrics()[h.id];
           <div class="bars">
+            <div class="bar">
+              <div class="bar-label">
+                <span>CPU</span>
+                <span class="muted">{{ cpuPercent(m) }}%</span>
+              </div>
+              <p-progressBar [value]="cpuPercent(m)" [showValue]="false"></p-progressBar>
+            </div>
+
             <div class="bar">
               <div class="bar-label">
                 <span>RAM</span>
                 <span class="muted">{{ m?.memoryUsedBytes | bytes }} / {{ m?.memoryTotalBytes | bytes }}</span>
               </div>
-              <p-progressBar [value]="memPercent(m)"></p-progressBar>
+              <p-progressBar [value]="memPercent(m)" [showValue]="false"></p-progressBar>
             </div>
 
             @for (d of m?.disks ?? []; track d.mount) {
@@ -43,16 +57,32 @@
                   <span>{{ d.mount }}</span>
                   <span class="muted">{{ d.usedBytes | bytes }} / {{ d.totalBytes | bytes }}</span>
                 </div>
-                <p-progressBar [value]="diskPercent(d.totalBytes, d.usedBytes)"></p-progressBar>
+                <p-progressBar [value]="diskPercent(d.totalBytes, d.usedBytes)" [showValue]="false"></p-progressBar>
+              </div>
+            }
+
+            @if (processCounts()[h.id] !== undefined) {
+              <div class="process-count muted">
+                {{ processCounts()[h.id] }} processes running
               </div>
             }
           </div>
-        </div>
 
-        <ng-template pTemplate="footer">
-          <a [routerLink]="['/hosts', h.id]">View processes & history →</a>
-        </ng-template>
-      </p-card>
-    }
-  </div>
+          <ng-template pTemplate="footer">
+            <a [routerLink]="['/hosts', h.id]">View processes & history →</a>
+          </ng-template>
+        </p-card>
+      }
+    </div>
+  }
+
+  @if (viewMode() === 'grid') {
+    <ag-grid-angular
+      class="ag-theme-quartz-dark fleet-grid"
+      [rowData]="gridRowData"
+      [columnDefs]="gridCols"
+      [defaultColDef]="defaultColDef"
+      [animateRows]="true">
+    </ag-grid-angular>
+  }
 </div>
