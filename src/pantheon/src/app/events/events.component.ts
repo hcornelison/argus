@@ -2,12 +2,12 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { TableModule } from 'primeng/table';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef, ValueFormatterParams } from 'ag-grid-community';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { TagModule } from 'primeng/tag';
 import { ArgusApiService } from '../core/argus-api.service';
 import { LiveService } from '../core/live.service';
 import { EventLog, Host } from '../core/models';
@@ -15,7 +15,7 @@ import { EventLog, Host } from '../core/models';
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, SelectModule, InputTextModule, ButtonModule, ToggleSwitchModule, TagModule],
+  imports: [CommonModule, FormsModule, AgGridAngular, SelectModule, InputTextModule, ButtonModule, ToggleSwitchModule],
   templateUrl: './events.component.html'
 })
 export class EventsComponent implements OnInit, OnDestroy {
@@ -27,7 +27,6 @@ export class EventsComponent implements OnInit, OnDestroy {
   hostNames = signal<Record<number, string>>({});
   entries = signal<EventLog[]>([]);
 
-  // Filters
   hostId: number | null = null;
   level: string | null = null;
   search = '';
@@ -46,6 +45,24 @@ export class EventsComponent implements OnInit, OnDestroy {
     { label: 'Last hour', value: 60 },
     { label: 'Last 6 hours', value: 360 },
     { label: 'Last 24 hours', value: 1440 }
+  ];
+
+  defaultColDef: ColDef = { sortable: true, resizable: true, filter: true };
+
+  eventCols: ColDef<EventLog>[] = [
+    {
+      field: 'timestampUtc', headerName: 'Time', width: 190, sort: 'desc',
+      valueFormatter: (p: ValueFormatterParams) => p.value ? new Date(p.value).toLocaleString() : ''
+    },
+    {
+      headerName: 'Host', width: 130,
+      valueGetter: p => this.hostNames()[p.data?.hostId ?? 0] ?? (p.data?.hostId ?? '')
+    },
+    { field: 'level', headerName: 'Level', width: 110 },
+    { field: 'channel', headerName: 'Channel', width: 170 },
+    { field: 'source', headerName: 'Source', width: 150 },
+    { field: 'eventId', headerName: 'ID', width: 70 },
+    { field: 'message', headerName: 'Message', flex: 1, minWidth: 200 },
   ];
 
   ngOnInit(): void {
@@ -93,15 +110,5 @@ export class EventsComponent implements OnInit, OnDestroy {
   private stopLiveTail(): void {
     this.evtSub?.unsubscribe();
     this.evtSub = undefined;
-  }
-
-  severity(level: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
-    switch (level) {
-      case 'Critical':
-      case 'Error': return 'danger';
-      case 'Warning': return 'warn';
-      case 'Information': return 'info';
-      default: return 'secondary';
-    }
   }
 }

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { TableModule } from 'primeng/table';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef } from 'ag-grid-community';
 import { KnobModule } from 'primeng/knob';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { CardModule } from 'primeng/card';
@@ -15,7 +16,7 @@ import { LiveMetric, ProcessInfo } from '../core/models';
 @Component({
   selector: 'app-host-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TableModule, KnobModule, ProgressBarModule, CardModule, BytesPipe],
+  imports: [CommonModule, FormsModule, RouterLink, AgGridAngular, KnobModule, ProgressBarModule, CardModule, BytesPipe],
   templateUrl: './host-detail.component.html'
 })
 export class HostDetailComponent implements OnInit, OnDestroy {
@@ -28,6 +29,16 @@ export class HostDetailComponent implements OnInit, OnDestroy {
   metric = signal<LiveMetric | undefined>(undefined);
   processes = signal<ProcessInfo[]>([]);
   snapshotAt = signal<string | null>(null);
+
+  defaultColDef: ColDef = { sortable: true, resizable: true, filter: true, flex: 1 };
+
+  processCols: ColDef<ProcessInfo>[] = [
+    { field: 'pid', headerName: 'PID', flex: 0, width: 80 },
+    { field: 'name', headerName: 'Name', flex: 2 },
+    { field: 'cpuPercent', headerName: 'CPU %', valueFormatter: p => p.value?.toFixed(1) ?? '0.0', sort: 'desc' },
+    { field: 'memoryBytes', headerName: 'Memory', valueFormatter: p => formatBytes(p.value) },
+    { field: 'threadCount', headerName: 'Threads', flex: 0, width: 100 },
+  ];
 
   ngOnInit(): void {
     this.hostId = Number(this.route.snapshot.paramMap.get('id'));
@@ -59,4 +70,11 @@ export class HostDetailComponent implements OnInit, OnDestroy {
     if (!m || !m.memoryTotalBytes) return 0;
     return Math.round((m.memoryUsedBytes / m.memoryTotalBytes) * 100);
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }

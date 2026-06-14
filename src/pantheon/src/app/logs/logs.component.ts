@@ -2,7 +2,8 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { TableModule } from 'primeng/table';
+import { AgGridAngular } from 'ag-grid-angular';
+import { ColDef, ValueFormatterParams } from 'ag-grid-community';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -14,7 +15,7 @@ import { Host, LogLine } from '../core/models';
 @Component({
   selector: 'app-logs',
   standalone: true,
-  imports: [CommonModule, FormsModule, TableModule, SelectModule, InputTextModule, ButtonModule, ToggleSwitchModule],
+  imports: [CommonModule, FormsModule, AgGridAngular, SelectModule, InputTextModule, ButtonModule, ToggleSwitchModule],
   templateUrl: './logs.component.html'
 })
 export class LogsComponent implements OnInit, OnDestroy {
@@ -26,11 +27,10 @@ export class LogsComponent implements OnInit, OnDestroy {
   files = signal<string[]>([]);
   lines = signal<LogLine[]>([]);
 
-  // Filters
   hostId: number | null = null;
   filePath: string | null = null;
   search = '';
-  minutes = 5; // default window: last 5 minutes
+  minutes = 5;
   liveTail = false;
 
   windowOptions = [
@@ -38,6 +38,17 @@ export class LogsComponent implements OnInit, OnDestroy {
     { label: 'Last 15 min', value: 15 },
     { label: 'Last hour', value: 60 },
     { label: 'Last 24 hours', value: 1440 }
+  ];
+
+  defaultColDef: ColDef = { sortable: true, resizable: true, filter: true };
+
+  logCols: ColDef<LogLine>[] = [
+    {
+      field: 'timestampUtc', headerName: 'Time', width: 190, sort: 'desc',
+      valueFormatter: (p: ValueFormatterParams) => p.value ? new Date(p.value).toLocaleString() : ''
+    },
+    { field: 'filePath', headerName: 'File', width: 260, cellClass: 'mono-cell' },
+    { field: 'line', headerName: 'Line', flex: 1, minWidth: 200, cellClass: 'mono-cell' },
   ];
 
   ngOnInit(): void {
@@ -84,7 +95,6 @@ export class LogsComponent implements OnInit, OnDestroy {
         (!this.search || l.line.toLowerCase().includes(this.search.toLowerCase())));
       if (incoming.length) this.lines.update(cur => [...incoming.reverse(), ...cur].slice(0, 2000));
     });
-    // Subscribe to all known hosts (or the selected one) for live pushes.
     const ids = this.hostId != null ? [this.hostId] : this.hosts().map(h => h.id);
     for (const id of ids) await this.live.subscribe(id);
   }

@@ -24,32 +24,15 @@
     </div>
   </div>
 
-  <p-table [value]="entries()" [paginator]="!liveTail" [rows]="50" [scrollable]="true" scrollHeight="60vh"
-           styleClass="p-datatable-sm logs-table">
-    <ng-template pTemplate="header">
-      <tr>
-        <th style="width:13rem">Time</th>
-        <th style="width:9rem">Host</th>
-        <th style="width:7rem">Level</th>
-        <th style="width:12rem">Channel</th>
-        <th style="width:10rem">Source</th>
-        <th style="width:5rem">ID</th>
-        <th>Message</th>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-e>
-      <tr>
-        <td class="muted">{{ e.timestampUtc | date:'medium' }}</td>
-        <td>{{ hostNames()[e.hostId] || e.hostId }}</td>
-        <td><p-tag [value]="e.level" [severity]="severity(e.level)"></p-tag></td>
-        <td class="file" [title]="e.channel">{{ e.channel }}</td>
-        <td class="file" [title]="e.source">{{ e.source }}</td>
-        <td>{{ e.eventId || '' }}</td>
-        <td class="line">{{ e.message }}</td>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="emptymessage">
-      <tr><td colspan="7" class="muted">No events in this window.</td></tr>
-    </ng-template>
-  </p-table>
+  <ag-grid-angular
+    class="ag-theme-quartz-dark"
+    style="width: 100%; height: 65vh;"
+    [rowData]="entries()"
+    [columnDefs]="eventCols"
+    [defaultColDef]="defaultColDef"
+    [pagination]="!liveTail"
+    [paginationPageSize]="100"
+    [paginationPageSizeSelector]="[50, 100, 250, 500]"
+    [rowBuffer]="20"
+  />
 </div>
