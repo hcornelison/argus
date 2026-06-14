@@ -115,7 +115,7 @@ public class LogTailingWorker : BackgroundService
 
         try
         {
-            using var call = _connection.Client.StreamLogs(_connection.AuthHeaders(), cancellationToken: ct);
+            using var call = _connection.Client.StreamLogs(cancellationToken: ct);
             await call.RequestStream.WriteAsync(batch, ct);
             await call.RequestStream.CompleteAsync();
             await call.ResponseAsync;

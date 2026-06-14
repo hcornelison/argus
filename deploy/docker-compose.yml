@@ -26,7 +26,6 @@ services:
       ConnectionStrings__Argus: "Data Source=/data/argus.db"
       Redis__ConnectionString: "redis:6379"
       Retention__Days: "7"
-      Ingest__ApiKeys__0: "dev-agent-key-001"
       Database__MigrateOnStartup: "true"
     volumes:
       - argus-sqlite:/data

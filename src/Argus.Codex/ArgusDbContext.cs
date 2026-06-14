@@ -13,12 +13,10 @@ public class ArgusDbContext : DbContext
     {
         b.Entity<Host>(e =>
         {
-            e.HasIndex(h => h.MachineName);
+            e.HasIndex(h => h.MachineName).IsUnique();
             e.Property(h => h.MachineName).HasMaxLength(256);
             e.Property(h => h.OperatingSystem).HasMaxLength(256);
             e.Property(h => h.AgentVersion).HasMaxLength(64);
-            e.Property(h => h.ApiKeyHash).HasMaxLength(128);
-            e.HasIndex(h => h.ApiKeyHash);
         });
     }
 }

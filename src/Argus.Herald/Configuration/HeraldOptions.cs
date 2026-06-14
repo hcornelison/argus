@@ -7,9 +7,6 @@ public class HeraldOptions
     /// <summary>styx gRPC endpoint, e.g. http://localhost:8081 (h2c) or https://styx:8081.</summary>
     public string StyxGrpcEndpoint { get; set; } = "http://localhost:8081";
 
-    /// <summary>Per-agent API key sent in the x-argus-api-key header.</summary>
-    public string ApiKey { get; set; } = string.Empty;
-
     public int MetricsIntervalSeconds { get; set; } = 10;
     public int ProcessIntervalSeconds { get; set; } = 10;
 
