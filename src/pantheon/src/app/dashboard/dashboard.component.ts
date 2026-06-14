@@ -56,6 +56,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isOnline(h: Host): boolean {
     const m = this.metrics()[h.id];
     const ts = m?.timestampUtc ?? h.lastSeenUtc;
-    return this.now() - new Date(ts).getTime() < 90_000;
+    return this.now() - new Date(ts).getTime() < 30_000;
   }
 }
