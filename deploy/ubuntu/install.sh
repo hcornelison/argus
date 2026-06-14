@@ -30,6 +30,68 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
+# Resolve npm/node — sudo strips the invoking user's PATH, so search common
+# locations (system install, nvm for root, nvm for the real user, volta, fnm).
+# ---------------------------------------------------------------------------
+resolve_npm() {
+  # Already on PATH (system install, /usr/local/bin, etc.)
+  if command -v npm &>/dev/null; then
+    echo "$(command -v npm)"
+    return
+  fi
+
+  # Determine the real (non-root) user who invoked sudo
+  local real_user="${SUDO_USER:-}"
+
+  # Candidate directories to search
+  local candidates=(
+    /usr/local/bin
+    /usr/bin
+  )
+
+  # nvm for root
+  if [[ -d /root/.nvm ]]; then
+    candidates+=( "$(find /root/.nvm/versions/node -maxdepth 2 -name npm -type f 2>/dev/null | sort -V | tail -1 | xargs dirname 2>/dev/null || true)" )
+  fi
+
+  # nvm / volta / fnm for the real user
+  if [[ -n "$real_user" ]]; then
+    local home
+    home="$(getent passwd "$real_user" | cut -d: -f6)"
+    for tool_dir in "$home/.nvm/versions/node" "$home/.volta/bin" "$home/.fnm/node-versions"; do
+      if [[ -d "$tool_dir" ]]; then
+        local found
+        found="$(find "$tool_dir" -maxdepth 3 -name npm -type f 2>/dev/null | sort -V | tail -1 | xargs dirname 2>/dev/null || true)"
+        [[ -n "$found" ]] && candidates+=( "$found" )
+      fi
+    done
+    # Also try sourcing nvm directly
+    if [[ -s "$home/.nvm/nvm.sh" ]]; then
+      # shellcheck disable=SC1090
+      export NVM_DIR="$home/.nvm"
+      sudo -u "$real_user" bash -c 'source "$NVM_DIR/nvm.sh" && which npm' 2>/dev/null && return || true
+    fi
+  fi
+
+  for dir in "${candidates[@]}"; do
+    [[ -x "$dir/npm" ]] && echo "$dir/npm" && return
+  done
+
+  echo ""
+}
+
+NPM_BIN="$(resolve_npm)"
+if [[ -z "$NPM_BIN" ]]; then
+  echo "ERROR: npm not found. Install Node.js 22+ and ensure it is on PATH before running this script." >&2
+  echo "       If you installed via nvm, try: sudo env PATH=\"\$PATH\" ./install.sh ..." >&2
+  exit 1
+fi
+# Derive the directory so we can prefix PATH for ng as well
+NPM_DIR="$(dirname "$NPM_BIN")"
+export PATH="$NPM_DIR:$PATH"
+echo "    Using npm: $NPM_BIN ($(npm --version))"
+
+# ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
