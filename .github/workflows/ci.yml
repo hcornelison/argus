@@ -1,0 +1,46 @@
+name: CI
+
+# Build the .NET services and the Angular UI on every push and pull request.
+on:
+  push:
+  pull_request:
+
+jobs:
+  dotnet:
+    name: Build .NET (herald / styx / codex / contracts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Argus.slnx
+
+      - name: Build
+        run: dotnet build Argus.slnx --configuration Release --no-restore
+
+  web:
+    name: Build pantheon (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/pantheon
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/pantheon/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npx ng build --configuration production
