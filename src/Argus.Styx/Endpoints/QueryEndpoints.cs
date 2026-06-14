@@ -18,14 +18,27 @@ public static class QueryEndpoints
         var api = app.MapGroup("/api").RequireAuthorization("ui");
 
         api.MapGet("/hosts", async (ArgusDbContext db, CancellationToken ct) =>
-            await db.Hosts
-                .OrderBy(h => h.MachineName)
-                .Select(h => new
-                {
-                    h.Id, h.MachineName, h.OperatingSystem, h.AgentVersion,
-                    h.FirstSeenUtc, h.LastSeenUtc,
-                })
-                .ToListAsync(ct));
+        {
+            var hosts = await db.Hosts.OrderBy(h => h.MachineName).ToListAsync(ct);
+            return hosts.Select(h => new
+            {
+                h.Id, h.MachineName, h.OperatingSystem, h.AgentVersion,
+                firstSeenUtc = DateTime.SpecifyKind(h.FirstSeenUtc, DateTimeKind.Utc),
+                lastSeenUtc  = DateTime.SpecifyKind(h.LastSeenUtc,  DateTimeKind.Utc),
+            });
+        });
+
+        api.MapGet("/hosts/{id:long}", async (long id, ArgusDbContext db, CancellationToken ct) =>
+        {
+            var h = await db.Hosts.FindAsync([id], ct);
+            if (h is null) return Results.NotFound();
+            return Results.Ok(new
+            {
+                h.Id, h.MachineName, h.OperatingSystem, h.AgentVersion,
+                firstSeenUtc = DateTime.SpecifyKind(h.FirstSeenUtc, DateTimeKind.Utc),
+                lastSeenUtc  = DateTime.SpecifyKind(h.LastSeenUtc,  DateTimeKind.Utc),
+            });
+        });
 
         api.MapGet("/hosts/{id:long}/metrics", async (long id, DateTime? from, DateTime? to, RedisStreamService redis, CancellationToken ct) =>
         {
@@ -35,11 +48,13 @@ public static class QueryEndpoints
             {
                 metrics = metrics.Select(m => new
                 {
-                    m.TimestampUtc, m.CpuPercent, m.MemoryTotalBytes, m.MemoryUsedBytes,
+                    timestampUtc = DateTime.SpecifyKind(m.TimestampUtc, DateTimeKind.Utc),
+                    m.CpuPercent, m.MemoryTotalBytes, m.MemoryUsedBytes,
                 }),
                 disks = metrics.SelectMany(m => m.Disks.Select(d => new
                 {
-                    m.TimestampUtc, d.Mount, d.TotalBytes, d.UsedBytes,
+                    timestampUtc = DateTime.SpecifyKind(m.TimestampUtc, DateTimeKind.Utc),
+                    d.Mount, d.TotalBytes, d.UsedBytes,
                 })),
             });
         });
@@ -56,6 +71,17 @@ public static class QueryEndpoints
                 processes = snap.Processes
                     .OrderByDescending(p => p.CpuPercent)
                     .Select(p => new { p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount }),
+            });
+        });
+
+        api.MapGet("/hosts/{id:long}/process-history", async (long id, string name, DateTime? from, DateTime? to, RedisStreamService redis, CancellationToken ct) =>
+        {
+            var (f, t) = Window(from, to);
+            var points = await redis.GetProcessHistoryAsync(id, name, f, t);
+            return points.Select(p => new
+            {
+                timestampUtc = DateTime.SpecifyKind(p.TimestampUtc, DateTimeKind.Utc),
+                p.CpuPercent, p.MemoryBytes, p.ThreadCount,
             });
         });
 

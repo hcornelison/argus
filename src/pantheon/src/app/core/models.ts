@@ -58,6 +58,13 @@ export interface LiveProcesses {
   processes: ProcessInfo[];
 }
 
+export interface ProcessHistoryPoint {
+  timestampUtc: string;
+  cpuPercent: number;
+  memoryBytes: number;
+  threadCount: number;
+}
+
 export interface LogLine {
   hostId: number;
   timestampUtc: string;

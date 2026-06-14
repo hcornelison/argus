@@ -100,3 +100,31 @@ html, body {
 .filters .tail { display: flex; align-items: center; gap: .5rem; }
 .logs-table .line { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; white-space: pre-wrap; }
 .logs-table .file { font-size: .78rem; color: var(--p-text-muted-color); overflow: hidden; text-overflow: ellipsis; max-width: 18rem; }
+
+/* Host detail — history + process drill-down */
+.section-head {
+  display: flex; align-items: center; gap: 1rem; margin-bottom: .75rem;
+  h3 { margin: 0; }
+}
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.chart { height: 240px; width: 100%; }
+.chart-card { width: 100%; }
+
+.os-label { font-size: .85rem; }
+.hint { margin: -.5rem 0 .5rem; font-size: .8rem; }
+
+.process-history-panel {
+  margin-top: 1rem;
+  border-top: 1px solid var(--p-surface-200, #e5e7eb);
+  padding-top: 1rem;
+}
+.process-history-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .75rem;
+  h4 { margin: 0; }
+}

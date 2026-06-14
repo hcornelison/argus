@@ -1,14 +1,15 @@
 <div class="page">
   <div class="page-head">
     <a routerLink="/" class="muted">← Fleet</a>
-    <h2>Host #{{ hostId }}</h2>
+    <h2>{{ host()?.machineName ?? 'Loading…' }}</h2>
+    <span class="muted os-label">{{ host()?.operatingSystem }}</span>
   </div>
 
   @let m = metric();
   <div class="detail-gauges">
     <p-card>
       <div class="gauge">
-        <p-knob [ngModel]="m?.cpuPercent ?? 0" [readonly]="true" [min]="0" [max]="100"
+        <p-knob [ngModel]="m ? Math.round(m.cpuPercent) : 0" [readonly]="true" [min]="0" [max]="100"
                 valueTemplate="{value}%" [size]="120"></p-knob>
         <div class="gauge-label">CPU</div>
       </div>
@@ -28,21 +29,74 @@
             <span>{{ d.mount }}</span>
             <span class="muted">{{ d.usedBytes | bytes }} / {{ d.totalBytes | bytes }}</span>
           </div>
-          <p-progressBar [value]="d.totalBytes ? (d.usedBytes / d.totalBytes * 100) : 0"></p-progressBar>
+          <p-progressBar [value]="diskPercent(d.totalBytes, d.usedBytes)"></p-progressBar>
         </div>
       }
     </p-card>
   </div>
 
+  <!-- History section -->
+  <div class="section-head">
+    <h3>History</h3>
+    <p-selectButton [options]="windowOptions" [ngModel]="historyWindow()"
+                    (ngModelChange)="changeWindow($event)"
+                    optionLabel="label" optionValue="value" />
+  </div>
+
+  @let history = metricsHistory();
+  @if (history.length > 0) {
+    <div class="charts-row">
+      <p-card header="CPU &amp; RAM" styleClass="chart-card">
+        <div echarts [options]="systemChartOption(history)" class="chart"></div>
+      </p-card>
+      <p-card header="Disk Usage" styleClass="chart-card">
+        <div echarts [options]="diskChartOption(disksHistory())" class="chart"></div>
+      </p-card>
+    </div>
+  } @else {
+    <p class="muted">No metric history in the selected window.</p>
+  }
+
+  <!-- Processes -->
   <h3>Processes @if (snapshotAt()) {<span class="muted">at {{ snapshotAt() | date:'medium' }}</span>}</h3>
+  <p class="muted hint">Click a row to view its history.</p>
   <ag-grid-angular
     [theme]="theme.gridTheme()"
-    style="width: 100%; height: 520px;"
+    style="width: 100%; height: 400px;"
     [rowData]="processes()"
     [columnDefs]="processCols"
     [defaultColDef]="defaultColDef"
     [pagination]="true"
-    [paginationPageSize]="100"
-    [paginationPageSizeSelector]="[50, 100, 250]"
+    [paginationPageSize]="50"
+    [paginationPageSizeSelector]="[25, 50, 100]"
+    [rowSelection]="'single'"
+    (gridReady)="onGridReady($event)"
+    (rowSelected)="onRowSelected($event)"
   />
+
+  <!-- Process history panel -->
+  @if (selectedProcess(); as proc) {
+    <div class="process-history-panel">
+      <div class="process-history-head">
+        <h4>{{ proc.name }} — History ({{ historyWindow() }})</h4>
+        <button pButton icon="pi pi-times" [text]="true" severity="secondary"
+                (click)="clearProcessSelection()"></button>
+      </div>
+
+      @if (processHistoryLoading()) {
+        <p class="muted">Loading…</p>
+      } @else if (processHistory().length === 0) {
+        <p class="muted">No history for this process in the selected window. It may have started recently or the name changed.</p>
+      } @else {
+        <div class="charts-row">
+          <p-card header="CPU % &amp; Threads" styleClass="chart-card">
+            <div echarts [options]="processChartOption(processHistory(), proc.name)" class="chart"></div>
+          </p-card>
+          <p-card header="Memory" styleClass="chart-card">
+            <div echarts [options]="processMemChartOption(processHistory())" class="chart"></div>
+          </p-card>
+        </div>
+      }
+    </div>
+  }
 </div>

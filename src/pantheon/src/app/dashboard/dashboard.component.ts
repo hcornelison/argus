@@ -83,7 +83,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isOnline(h: Host): boolean {
     const m = this.metrics()[h.id];
     const ts = m?.timestampUtc ?? h.lastSeenUtc;
-    return this.now() - new Date(ts).getTime() < 30_000;
+    return this.now() - parseUtc(ts) < 30_000;
   }
 
   // AG Grid list view
@@ -115,4 +115,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   get gridRowData() {
     return this.filteredHosts();
   }
+}
+
+function parseUtc(ts: string): number {
+  return new Date(ts.endsWith('Z') ? ts : ts + 'Z').getTime();
 }
