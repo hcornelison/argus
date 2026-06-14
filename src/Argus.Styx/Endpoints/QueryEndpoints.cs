@@ -1,4 +1,5 @@
 using Argus.Codex;
+using Argus.Codex.Redis;
 using Microsoft.EntityFrameworkCore;
 
 namespace Argus.Styx.Endpoints;
@@ -7,6 +8,8 @@ namespace Argus.Styx.Endpoints;
 /// REST query API consumed by pantheon. All routes hang off /api and run under the
 /// "ui" authorization policy, which is a permissive no-op today but is the single
 /// place to require OIDC bearer auth later.
+///
+/// Host records come from SQLite; all time-series data comes from Redis Streams.
 /// </summary>
 public static class QueryEndpoints
 {
@@ -24,80 +27,85 @@ public static class QueryEndpoints
                 })
                 .ToListAsync(ct));
 
-        api.MapGet("/hosts/{id:long}/metrics", async (long id, DateTime? from, DateTime? to, ArgusDbContext db, CancellationToken ct) =>
+        api.MapGet("/hosts/{id:long}/metrics", async (long id, DateTime? from, DateTime? to, RedisStreamService redis, CancellationToken ct) =>
         {
             var (f, t) = Window(from, to);
-            var metrics = await db.MetricSamples
-                .Where(m => m.HostId == id && m.TimestampUtc >= f && m.TimestampUtc <= t)
-                .OrderBy(m => m.TimestampUtc)
-                .Select(m => new { m.TimestampUtc, m.CpuPercent, m.MemoryTotalBytes, m.MemoryUsedBytes })
-                .ToListAsync(ct);
-            var disks = await db.DiskSamples
-                .Where(d => d.HostId == id && d.TimestampUtc >= f && d.TimestampUtc <= t)
-                .OrderBy(d => d.TimestampUtc)
-                .Select(d => new { d.TimestampUtc, d.Mount, d.TotalBytes, d.UsedBytes })
-                .ToListAsync(ct);
-            return Results.Ok(new { metrics, disks });
+            var metrics = await redis.GetMetricsAsync(id, f, t);
+            return Results.Ok(new
+            {
+                metrics = metrics.Select(m => new
+                {
+                    m.TimestampUtc, m.CpuPercent, m.MemoryTotalBytes, m.MemoryUsedBytes,
+                }),
+                disks = metrics.SelectMany(m => m.Disks.Select(d => new
+                {
+                    m.TimestampUtc, d.Mount, d.TotalBytes, d.UsedBytes,
+                })),
+            });
         });
 
-        api.MapGet("/hosts/{id:long}/processes", async (long id, DateTime? at, ArgusDbContext db, CancellationToken ct) =>
+        api.MapGet("/hosts/{id:long}/processes", async (long id, DateTime? at, RedisStreamService redis, CancellationToken ct) =>
         {
-            // Snapshot timestamp at/just-before `at`, else the most recent snapshot.
-            var q = db.ProcessSamples.Where(p => p.HostId == id);
-            if (at is not null) q = q.Where(p => p.TimestampUtc <= at);
-            var snapTs = await q.MaxAsync(p => (DateTime?)p.TimestampUtc, ct);
-            if (snapTs is null) return Results.Ok(new { timestampUtc = (DateTime?)null, processes = Array.Empty<object>() });
+            var snap = await redis.GetLatestProcessSnapshotAsync(id, at);
+            if (snap is null)
+                return Results.Ok(new { timestampUtc = (DateTime?)null, processes = Array.Empty<object>() });
 
-            var processes = await db.ProcessSamples
-                .Where(p => p.HostId == id && p.TimestampUtc == snapTs)
-                .OrderByDescending(p => p.CpuPercent)
-                .Select(p => new { p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount })
-                .ToListAsync(ct);
-            return Results.Ok(new { timestampUtc = snapTs, processes });
+            return Results.Ok(new
+            {
+                timestampUtc = snap.TimestampUtc,
+                processes = snap.Processes
+                    .OrderByDescending(p => p.CpuPercent)
+                    .Select(p => new { p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount }),
+            });
         });
 
-        api.MapGet("/hosts/{id:long}/eventlogs", async (long id, DateTime? from, DateTime? to, string? level, ArgusDbContext db, CancellationToken ct) =>
-        {
-            var (f, t) = Window(from, to);
-            var q = db.EventLogEntries.Where(e => e.HostId == id && e.TimestampUtc >= f && e.TimestampUtc <= t);
-            if (!string.IsNullOrWhiteSpace(level)) q = q.Where(e => e.Level == level);
-            return await q.OrderByDescending(e => e.TimestampUtc).Take(1000)
-                .Select(e => new { e.TimestampUtc, e.Channel, e.Source, e.Level, e.EventId, e.Message })
-                .ToListAsync(ct);
-        });
-
-        api.MapGet("/logs", async (long? hostId, string? filePath, DateTime? from, DateTime? to, string? q, ArgusDbContext db, CancellationToken ct) =>
+        api.MapGet("/hosts/{id:long}/eventlogs", async (long id, DateTime? from, DateTime? to, string? level, RedisStreamService redis, CancellationToken ct) =>
         {
             var (f, t) = Window(from, to);
-            var query = db.LogEntries.Where(l => l.TimestampUtc >= f && l.TimestampUtc <= t);
-            if (hostId is not null) query = query.Where(l => l.HostId == hostId);
-            if (!string.IsNullOrWhiteSpace(filePath)) query = query.Where(l => l.FilePath == filePath);
-            if (!string.IsNullOrWhiteSpace(q)) query = query.Where(l => l.Line.Contains(q));
-            return await query.OrderByDescending(l => l.TimestampUtc).Take(2000)
-                .Select(l => new { l.HostId, l.TimestampUtc, l.FilePath, l.Line, l.Level })
-                .ToListAsync(ct);
+            return await redis.GetEventsAsync(id, f, t, level);
         });
 
-        // Global event-log query (across hosts), mirroring /logs.
-        api.MapGet("/eventlogs", async (long? hostId, string? level, string? channel, DateTime? from, DateTime? to, string? q, ArgusDbContext db, CancellationToken ct) =>
+        api.MapGet("/logs", async (long? hostId, string? filePath, DateTime? from, DateTime? to, string? q, ArgusDbContext db, RedisStreamService redis, CancellationToken ct) =>
         {
             var (f, t) = Window(from, to);
-            var query = db.EventLogEntries.Where(e => e.TimestampUtc >= f && e.TimestampUtc <= t);
-            if (hostId is not null) query = query.Where(e => e.HostId == hostId);
-            if (!string.IsNullOrWhiteSpace(level)) query = query.Where(e => e.Level == level);
-            if (!string.IsNullOrWhiteSpace(channel)) query = query.Where(e => e.Channel == channel);
-            if (!string.IsNullOrWhiteSpace(q)) query = query.Where(e => e.Message.Contains(q));
-            return await query.OrderByDescending(e => e.TimestampUtc).Take(2000)
-                .Select(e => new { e.HostId, e.TimestampUtc, e.Channel, e.Source, e.Level, e.EventId, e.Message })
-                .ToListAsync(ct);
+            var hostIds = hostId.HasValue
+                ? [hostId.Value]
+                : await db.Hosts.Select(h => h.Id).ToListAsync(ct);
+
+            var tasks = hostIds.Select(id => redis.GetLogsAsync(id, f, t, filePath, q));
+            var results = await Task.WhenAll(tasks);
+            return results.SelectMany(r => r)
+                .OrderByDescending(l => l.TimestampUtc)
+                .Take(2000)
+                .Select(l => new { l.TimestampUtc, l.FilePath, l.Line, l.Level });
         });
 
-        // Distinct log file paths (optionally per host) to populate the log-viewer file picker.
-        api.MapGet("/logfiles", async (long? hostId, ArgusDbContext db, CancellationToken ct) =>
+        api.MapGet("/eventlogs", async (long? hostId, string? level, string? channel, DateTime? from, DateTime? to, string? q, ArgusDbContext db, RedisStreamService redis, CancellationToken ct) =>
         {
-            var query = db.LogEntries.AsQueryable();
-            if (hostId is not null) query = query.Where(l => l.HostId == hostId);
-            return await query.Select(l => l.FilePath).Distinct().OrderBy(p => p).ToListAsync(ct);
+            var (f, t) = Window(from, to);
+            var hostIds = hostId.HasValue
+                ? [hostId.Value]
+                : await db.Hosts.Select(h => h.Id).ToListAsync(ct);
+
+            var tasks = hostIds.Select(id => redis.GetEventsAsync(id, f, t, level));
+            var results = await Task.WhenAll(tasks);
+            return results.SelectMany(r => r)
+                .Where(e => string.IsNullOrWhiteSpace(channel) || e.Channel == channel)
+                .Where(e => string.IsNullOrWhiteSpace(q) || e.Message.Contains(q, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(e => e.TimestampUtc)
+                .Take(2000)
+                .Select(e => new { e.TimestampUtc, e.Channel, e.Source, e.Level, e.EventId, e.Message });
+        });
+
+        api.MapGet("/logfiles", async (long? hostId, ArgusDbContext db, RedisStreamService redis, CancellationToken ct) =>
+        {
+            var hostIds = hostId.HasValue
+                ? [hostId.Value]
+                : await db.Hosts.Select(h => h.Id).ToListAsync(ct);
+
+            var tasks = hostIds.Select(id => redis.GetLogFilesAsync(id));
+            var results = await Task.WhenAll(tasks);
+            return results.SelectMany(r => r).Distinct().OrderBy(p => p);
         });
     }
 

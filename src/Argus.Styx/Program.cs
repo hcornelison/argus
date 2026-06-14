@@ -9,11 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Allow running as a Windows Service or systemd service (each call is a no-op on other OSes).
-builder.Host.UseWindowsService(o => o.ServiceName = "Argus Styx");
-builder.Host.UseSystemd();
-
-// --- Data layer (codex) ---
+// --- Data layer (codex): SQLite (hosts) + Redis (time-series) ---
 builder.Services.AddCodex(builder.Configuration);
 
 // --- Ingest auth (per-agent API keys) ---
@@ -28,12 +24,6 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 
-// CORS so the Angular dev server can reach the API + hub.
-const string DevCors = "pantheon-dev";
-builder.Services.AddCors(o => o.AddPolicy(DevCors, p => p
-    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? new[] { "http://localhost:4200" })
-    .AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
-
 // Authorization pipeline. The "ui" policy is a permissive no-op now; swap in an
 // authenticated policy (OIDC JWT bearer) later without touching the endpoints.
 builder.Services.AddAuthorization(o =>
@@ -45,7 +35,7 @@ builder.Services.AddHostedService<RetentionBackgroundService>();
 
 var app = builder.Build();
 
-// Apply migrations on startup for the dev slice.
+// Apply EF migrations to the SQLite host registry on startup.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ArgusDbContext>();
@@ -56,7 +46,6 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-app.UseCors(DevCors);
 app.UseAuthorization();
 
 app.MapGrpcService<IngestServiceImpl>();

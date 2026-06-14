@@ -13,10 +13,4 @@ public class Host
 
     public DateTime FirstSeenUtc { get; set; }
     public DateTime LastSeenUtc { get; set; }
-
-    public ICollection<MetricSample> MetricSamples { get; set; } = new List<MetricSample>();
-    public ICollection<DiskSample> DiskSamples { get; set; } = new List<DiskSample>();
-    public ICollection<ProcessSample> ProcessSamples { get; set; } = new List<ProcessSample>();
-    public ICollection<EventLogEntry> EventLogEntries { get; set; } = new List<EventLogEntry>();
-    public ICollection<LogEntry> LogEntries { get; set; } = new List<LogEntry>();
 }

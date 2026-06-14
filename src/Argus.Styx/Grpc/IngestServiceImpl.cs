@@ -1,5 +1,5 @@
 using Argus.Codex;
-using Entity = Argus.Codex.Entities;
+using Argus.Codex.Redis;
 using Argus.Contracts;
 using Argus.Styx.Hubs;
 using Argus.Styx.Security;
@@ -11,17 +11,20 @@ namespace Argus.Styx.Grpc;
 
 /// <summary>
 /// Server side of the herald -> styx ingest contract. The ApiKeyInterceptor has already
-/// validated the caller; here we persist samples and push live updates to pantheon.
+/// validated the caller; here we write to Redis Streams and push live updates to pantheon.
+/// Host registration is the only operation that touches SQLite.
 /// </summary>
 public class IngestServiceImpl : IngestService.IngestServiceBase
 {
     private readonly ArgusDbContext _db;
+    private readonly RedisStreamService _redis;
     private readonly IHubContext<LiveHub> _hub;
     private readonly ILogger<IngestServiceImpl> _logger;
 
-    public IngestServiceImpl(ArgusDbContext db, IHubContext<LiveHub> hub, ILogger<IngestServiceImpl> logger)
+    public IngestServiceImpl(ArgusDbContext db, RedisStreamService redis, IHubContext<LiveHub> hub, ILogger<IngestServiceImpl> logger)
     {
         _db = db;
+        _redis = redis;
         _hub = hub;
         _logger = logger;
     }
@@ -37,7 +40,7 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         var host = await _db.Hosts.FirstOrDefaultAsync(h => h.ApiKeyHash == hash, context.CancellationToken);
         if (host is null)
         {
-            host = new Entity.Host { ApiKeyHash = hash, FirstSeenUtc = now };
+            host = new Argus.Codex.Entities.Host { ApiKeyHash = hash, FirstSeenUtc = now };
             _db.Hosts.Add(host);
         }
 
@@ -59,34 +62,19 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         {
             foreach (var s in batch.Samples)
             {
-                var ts = s.Timestamp.ToDateTime();
-                _db.MetricSamples.Add(new Entity.MetricSample
-                {
-                    HostId = batch.HostId,
-                    TimestampUtc = ts,
-                    CpuPercent = s.CpuPercent,
-                    MemoryTotalBytes = s.MemoryTotalBytes,
-                    MemoryUsedBytes = s.MemoryUsedBytes,
-                });
-                foreach (var d in s.Disks)
-                {
-                    _db.DiskSamples.Add(new Entity.DiskSample
-                    {
-                        HostId = batch.HostId,
-                        TimestampUtc = ts,
-                        Mount = d.Mount,
-                        TotalBytes = d.TotalBytes,
-                        UsedBytes = d.UsedBytes,
-                    });
-                }
+                var point = new MetricPoint(
+                    s.Timestamp.ToDateTime(),
+                    s.CpuPercent,
+                    s.MemoryTotalBytes,
+                    s.MemoryUsedBytes,
+                    s.Disks.Select(d => new DiskPoint(d.Mount, d.TotalBytes, d.UsedBytes)).ToArray());
+
+                await _redis.AppendMetricAsync(batch.HostId, point);
                 accepted++;
             }
 
-            await _db.SaveChangesAsync(context.CancellationToken);
             await TouchHostAsync(batch.HostId, context.CancellationToken);
-            _db.ChangeTracker.Clear();
 
-            // Push the latest sample to subscribed dashboards.
             var last = batch.Samples.LastOrDefault();
             if (last is not null)
             {
@@ -111,33 +99,21 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         await foreach (var batch in requestStream.ReadAllAsync(context.CancellationToken))
         {
             var ts = batch.Timestamp.ToDateTime();
-            foreach (var p in batch.Processes)
-            {
-                _db.ProcessSamples.Add(new Entity.ProcessSample
-                {
-                    HostId = batch.HostId,
-                    TimestampUtc = ts,
-                    Pid = p.Pid,
-                    Name = p.Name,
-                    CpuPercent = p.CpuPercent,
-                    MemoryBytes = p.MemoryBytes,
-                    ThreadCount = p.ThreadCount,
-                });
-                accepted++;
-            }
-            await _db.SaveChangesAsync(context.CancellationToken);
+            var processes = batch.Processes
+                .Select(p => new ProcessPoint(p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount))
+                .ToArray();
+
+            await _redis.AppendProcessSnapshotAsync(batch.HostId, ts, processes);
+            accepted += batch.Processes.Count;
+
             await TouchHostAsync(batch.HostId, context.CancellationToken);
-            _db.ChangeTracker.Clear();
 
             await _hub.Clients.Group(LiveHub.GroupFor(batch.HostId))
                 .SendAsync("processes", new
                 {
                     hostId = batch.HostId,
                     timestampUtc = ts,
-                    processes = batch.Processes.Select(p => new
-                    {
-                        p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount,
-                    }),
+                    processes = batch.Processes.Select(p => new { p.Pid, p.Name, p.CpuPercent, p.MemoryBytes, p.ThreadCount }),
                 }, context.CancellationToken);
         }
         return new IngestAck { Accepted = accepted };
@@ -150,21 +126,12 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         {
             foreach (var e in batch.Entries)
             {
-                _db.EventLogEntries.Add(new Entity.EventLogEntry
-                {
-                    HostId = batch.HostId,
-                    TimestampUtc = e.Timestamp.ToDateTime(),
-                    Channel = e.Channel,
-                    Source = e.Source,
-                    Level = e.Level,
-                    EventId = e.EventId,
-                    Message = e.Message,
-                });
+                await _redis.AppendEventAsync(batch.HostId, new EventPoint(
+                    e.Timestamp.ToDateTime(), e.Channel, e.Source, e.Level, e.EventId, e.Message));
                 accepted++;
             }
-            await _db.SaveChangesAsync(context.CancellationToken);
+
             await TouchHostAsync(batch.HostId, context.CancellationToken);
-            _db.ChangeTracker.Clear();
 
             if (batch.Entries.Count > 0)
             {
@@ -188,34 +155,24 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         long accepted = 0;
         await foreach (var batch in requestStream.ReadAllAsync(context.CancellationToken))
         {
-            var added = new List<Entity.LogEntry>();
             foreach (var l in batch.Lines)
             {
-                var entry = new Entity.LogEntry
-                {
-                    HostId = batch.HostId,
-                    TimestampUtc = l.Timestamp.ToDateTime(),
-                    FilePath = l.FilePath,
-                    Line = l.Line,
-                    Level = l.Level,
-                };
-                _db.LogEntries.Add(entry);
-                added.Add(entry);
+                await _redis.AppendLogAsync(batch.HostId, new LogPoint(
+                    l.Timestamp.ToDateTime(), l.FilePath, l.Line, l.Level));
                 accepted++;
             }
-            await _db.SaveChangesAsync(context.CancellationToken);
-            await TouchHostAsync(batch.HostId, context.CancellationToken);
-            _db.ChangeTracker.Clear();
 
-            if (added.Count > 0)
+            await TouchHostAsync(batch.HostId, context.CancellationToken);
+
+            if (batch.Lines.Count > 0)
             {
                 await _hub.Clients.Group(LiveHub.GroupFor(batch.HostId))
                     .SendAsync("logs", new
                     {
                         hostId = batch.HostId,
-                        lines = added.Select(l => new
+                        lines = batch.Lines.Select(l => new
                         {
-                            l.TimestampUtc, l.FilePath, l.Line, l.Level,
+                            timestampUtc = l.Timestamp.ToDateTime(), l.FilePath, l.Line, l.Level,
                         }),
                     }, context.CancellationToken);
             }
