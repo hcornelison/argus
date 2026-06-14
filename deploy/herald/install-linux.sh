@@ -16,5 +16,5 @@ cp "$REPO_ROOT/deploy/herald/argus-herald.service" /etc/systemd/system/argus-her
 systemctl daemon-reload
 systemctl enable --now argus-herald
 
-echo "Done. Configure $INSTALL_DIR/appsettings.json (StyxGrpcEndpoint, ApiKey, LogPaths),"
+echo "Done. Configure $INSTALL_DIR/appsettings.json (StyxGrpcEndpoint, LogPaths),"
 echo "then: systemctl restart argus-herald && journalctl -u argus-herald -f"

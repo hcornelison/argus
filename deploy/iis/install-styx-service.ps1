@@ -42,7 +42,6 @@ Start-Service $ServiceName
 
 Write-Host ""
 Write-Host "Done. styx listens on http://localhost:8080 (REST + SignalR) and :8081 (gRPC ingest)."
-Write-Host "Review $InstallDir\appsettings.json (Retention:Days, Ingest:ApiKeys, Kestrel endpoints)."
-Write-Host "IMPORTANT: replace the default Ingest:ApiKeys value and set a real SQL connection string"
-Write-Host "before exposing this to agents. To change it later:"
+Write-Host "Review $InstallDir\appsettings.json (Retention:Days, Kestrel endpoints)."
+Write-Host "IMPORTANT: set a real SQL connection string before exposing this to agents. To change it later:"
 Write-Host "  [Environment]::SetEnvironmentVariable('ConnectionStrings__Argus','<conn>','Machine'); Restart-Service $ServiceName"

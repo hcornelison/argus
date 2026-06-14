@@ -25,6 +25,6 @@ chown root:wheel "$PLIST"
 launchctl bootout system "$PLIST" 2>/dev/null || true
 launchctl bootstrap system "$PLIST"
 
-echo "Done. Configure $INSTALL_DIR/appsettings.json (StyxGrpcEndpoint, ApiKey, LogPaths),"
+echo "Done. Configure $INSTALL_DIR/appsettings.json (StyxGrpcEndpoint, LogPaths),"
 echo "then: sudo launchctl kickstart -k system/com.argus.herald"
 echo "Logs: tail -f /var/log/argus-herald.log"

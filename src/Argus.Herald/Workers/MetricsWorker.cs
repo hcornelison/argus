@@ -73,7 +73,7 @@ public class MetricsWorker : BackgroundService
         if (_buffer.Count == 0) return;
         try
         {
-            using var call = _connection.Client.StreamMetrics(_connection.AuthHeaders(), cancellationToken: ct);
+            using var call = _connection.Client.StreamMetrics(cancellationToken: ct);
             // Snapshot the count so a write failure leaves un-sent batches buffered.
             var pending = _buffer.Count;
             for (var i = 0; i < pending; i++)

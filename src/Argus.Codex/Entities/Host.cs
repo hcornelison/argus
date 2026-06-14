@@ -8,9 +8,6 @@ public class Host
     public string OperatingSystem { get; set; } = string.Empty;
     public string AgentVersion { get; set; } = string.Empty;
 
-    /// <summary>SHA-256 hash of the per-agent API key used for ingest auth.</summary>
-    public string ApiKeyHash { get; set; } = string.Empty;
-
     public DateTime FirstSeenUtc { get; set; }
     public DateTime LastSeenUtc { get; set; }
 }

@@ -30,9 +30,6 @@ public class IngestConnection : IDisposable
         Client = new IngestService.IngestServiceClient(_channel);
     }
 
-    /// <summary>Metadata carrying the per-agent API key on every call.</summary>
-    public Metadata AuthHeaders() => new() { { "x-argus-api-key", _options.ApiKey } };
-
     /// <summary>Registers this host with styx (idempotent) and caches the host id.</summary>
     public async Task<bool> EnsureRegisteredAsync(CancellationToken ct)
     {
@@ -46,7 +43,7 @@ public class IngestConnection : IDisposable
                 MachineName = Environment.MachineName,
                 OperatingSystem = RuntimeInformation.OSDescription,
                 AgentVersion = typeof(IngestConnection).Assembly.GetName().Version?.ToString() ?? "0.0.0",
-            }, AuthHeaders(), cancellationToken: ct);
+            }, cancellationToken: ct);
             HostId = resp.HostId;
             _logger.LogInformation("Registered with styx as host id {HostId}", HostId);
             return true;

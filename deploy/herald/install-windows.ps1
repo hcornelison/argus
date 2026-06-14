@@ -27,5 +27,5 @@ Write-Host "Creating service $ServiceName..."
 New-Service -Name $ServiceName -BinaryPathName $exe -DisplayName "Argus Herald" -StartupType Automatic
 Start-Service $ServiceName
 
-Write-Host "Done. Edit $InstallDir\appsettings.json (StyxGrpcEndpoint, ApiKey, LogPaths),"
+Write-Host "Done. Edit $InstallDir\appsettings.json (StyxGrpcEndpoint, LogPaths),"
 Write-Host "then: Restart-Service $ServiceName"

@@ -97,7 +97,7 @@ public class EventLogWorker : BackgroundService
     {
         try
         {
-            using var call = _connection.Client.StreamEvents(_connection.AuthHeaders(), cancellationToken: ct);
+            using var call = _connection.Client.StreamEvents(cancellationToken: ct);
             for (var i = 0; i < records.Count; i += ChunkSize)
             {
                 var batch = new EventBatch { HostId = _connection.HostId };

@@ -3,7 +3,6 @@ using Argus.Styx;
 using Argus.Styx.Endpoints;
 using Argus.Styx.Grpc;
 using Argus.Styx.Hubs;
-using Argus.Styx.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,12 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Data layer (codex): SQLite (hosts) + Redis (time-series) ---
 builder.Services.AddCodex(builder.Configuration);
 
-// --- Ingest auth (per-agent API keys) ---
-builder.Services.Configure<IngestOptions>(builder.Configuration.GetSection(IngestOptions.SectionName));
-builder.Services.AddSingleton<ApiKeyInterceptor>();
-
 // --- gRPC ingest (herald-facing) ---
-builder.Services.AddGrpc(o => o.Interceptors.Add<ApiKeyInterceptor>());
+builder.Services.AddGrpc();
 
 // --- REST + SignalR (pantheon-facing) ---
 builder.Services.AddControllers();

@@ -2,7 +2,6 @@ using Argus.Codex;
 using Argus.Codex.Redis;
 using Argus.Contracts;
 using Argus.Styx.Hubs;
-using Argus.Styx.Security;
 using Grpc.Core;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Argus.Styx.Grpc;
 
 /// <summary>
-/// Server side of the herald -> styx ingest contract. The ApiKeyInterceptor has already
-/// validated the caller; here we write to Redis Streams and push live updates to pantheon.
-/// Host registration is the only operation that touches SQLite.
+/// Server side of the herald -> styx ingest contract. Writes to Redis Streams and pushes
+/// live updates to pantheon. Host registration touches SQLite. Any machine running a
+/// herald agent is accepted.
 /// </summary>
 public class IngestServiceImpl : IngestService.IngestServiceBase
 {
@@ -29,18 +28,14 @@ public class IngestServiceImpl : IngestService.IngestServiceBase
         _logger = logger;
     }
 
-    private static string ApiKeyHash(ServerCallContext context)
-        => (string)context.UserState[ApiKeyInterceptor.UserStateKey];
-
     public override async Task<RegisterHostResponse> RegisterHost(RegisterHostRequest request, ServerCallContext context)
     {
-        var hash = ApiKeyHash(context);
         var now = DateTime.UtcNow;
 
-        var host = await _db.Hosts.FirstOrDefaultAsync(h => h.ApiKeyHash == hash, context.CancellationToken);
+        var host = await _db.Hosts.FirstOrDefaultAsync(h => h.MachineName == request.MachineName, context.CancellationToken);
         if (host is null)
         {
-            host = new Argus.Codex.Entities.Host { ApiKeyHash = hash, FirstSeenUtc = now };
+            host = new Argus.Codex.Entities.Host { FirstSeenUtc = now };
             _db.Hosts.Add(host);
         }
 

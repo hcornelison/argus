@@ -3,6 +3,7 @@ using System;
 using Argus.Codex;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Argus.Codex.Migrations;
 
 [DbContext(typeof(ArgusDbContext))]
-partial class ArgusDbContextModelSnapshot : ModelSnapshot
+[Migration("20260614143902_RemoveApiKeyHash")]
+partial class RemoveApiKeyHash
 {
-    protected override void BuildModel(ModelBuilder modelBuilder)
+    /// <inheritdoc />
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder

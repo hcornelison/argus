@@ -48,7 +48,7 @@ public class ProcessWorker : BackgroundService
                     MemoryBytes = p.MemoryBytes, ThreadCount = p.ThreadCount,
                 }));
 
-                using var call = _connection.Client.StreamProcesses(_connection.AuthHeaders(), cancellationToken: ct);
+                using var call = _connection.Client.StreamProcesses(cancellationToken: ct);
                 await call.RequestStream.WriteAsync(batch, ct);
                 await call.RequestStream.CompleteAsync();
                 await call.ResponseAsync;
