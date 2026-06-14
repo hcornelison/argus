@@ -1,5 +1,5 @@
-# Build
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Build — pin to amd64 so protoc (bundled in Grpc.Tools) doesn't segfault on ARM64 hosts
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY Argus.slnx ./
 COPY src/Argus.Contracts/ src/Argus.Contracts/
@@ -8,7 +8,7 @@ RUN dotnet restore src/Argus.Herald/Argus.Herald.csproj
 RUN dotnet publish src/Argus.Herald/Argus.Herald.csproj -c Release -o /app
 
 # Runtime
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app ./
 ENTRYPOINT ["dotnet", "Argus.Herald.dll"]
