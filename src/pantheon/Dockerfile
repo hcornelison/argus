@@ -6,7 +6,8 @@ RUN npm ci
 COPY . .
 RUN npx ng build --configuration production
 
-# Serve static files with nginx
+# Serve static files with nginx + reverse-proxy /api and /hubs to styx
 FROM nginx:alpine AS runtime
 COPY --from=build /app/dist/pantheon/browser /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

@@ -21,6 +21,9 @@ services:
       retries: 12
 
   styx:
+    # Pinned to amd64: the Grpc.Tools arm64 protoc segfaults inside Docker Desktop's Linux VM
+    # on Apple Silicon. amd64 protoc runs fine (native on x64 hosts/CI; under Rosetta on Macs).
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: src/Argus.Styx/Dockerfile
