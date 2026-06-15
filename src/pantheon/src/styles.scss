@@ -112,19 +112,17 @@ html, body {
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
+.charts-row--3 { grid-template-columns: 1fr 1fr 1fr; }
+.charts-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 .chart { height: 240px; width: 100%; }
 .chart-card { width: 100%; }
 
 .os-label { font-size: .85rem; }
 .hint { margin: -.5rem 0 .5rem; font-size: .8rem; }
 
-.process-history-panel {
-  margin-top: 1rem;
-  border-top: 1px solid var(--p-surface-200, #e5e7eb);
-  padding-top: 1rem;
-}
-.process-history-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: .75rem;
-  h4 { margin: 0; }
-}
+.process-drawer-title { font-size: 1.1rem; font-weight: 600; }
+.process-drawer .p-drawer-content { padding: 1rem; }

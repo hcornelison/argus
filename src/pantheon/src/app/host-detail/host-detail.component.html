@@ -45,12 +45,15 @@
 
   @let history = metricsHistory();
   @if (history.length > 0) {
-    <div class="charts-row">
-      <p-card header="CPU &amp; RAM" styleClass="chart-card">
-        <div echarts [options]="systemChartOption(history)" class="chart"></div>
+    <div class="charts-row charts-row--3">
+      <p-card header="CPU" styleClass="chart-card">
+        <div echarts [options]="cpuChartOption()" class="chart"></div>
+      </p-card>
+      <p-card header="RAM" styleClass="chart-card">
+        <div echarts [options]="ramChartOption()" class="chart"></div>
       </p-card>
       <p-card header="Disk Usage" styleClass="chart-card">
-        <div echarts [options]="diskChartOption(disksHistory())" class="chart"></div>
+        <div echarts [options]="diskChartOption()" class="chart"></div>
       </p-card>
     </div>
   } @else {
@@ -73,30 +76,37 @@
     (gridReady)="onGridReady($event)"
     (rowSelected)="onRowSelected($event)"
   />
+</div>
 
-  <!-- Process history panel -->
-  @if (selectedProcess(); as proc) {
-    <div class="process-history-panel">
-      <div class="process-history-head">
-        <h4>{{ proc.name }} — History ({{ historyWindow() }})</h4>
-        <button pButton icon="pi pi-times" [text]="true" severity="secondary"
-                (click)="clearProcessSelection()"></button>
-      </div>
+<!-- Process detail drawer -->
+<p-drawer
+  [visible]="drawerVisible()"
+  (visibleChange)="$event ? null : onDrawerHide()"
+  position="right"
+  styleClass="process-drawer"
+  [style]="{ width: '52rem' }"
+>
+  <ng-template pTemplate="header">
+    @if (selectedProcess(); as proc) {
+      <span class="process-drawer-title">{{ proc.name }}</span>
+    }
+  </ng-template>
 
-      @if (processHistoryLoading()) {
-        <p class="muted">Loading…</p>
-      } @else if (processHistory().length === 0) {
-        <p class="muted">No history for this process in the selected window. It may have started recently or the name changed.</p>
-      } @else {
-        <div class="charts-row">
-          <p-card header="CPU % &amp; Threads" styleClass="chart-card">
-            <div echarts [options]="processChartOption(processHistory(), proc.name)" class="chart"></div>
-          </p-card>
-          <p-card header="Memory" styleClass="chart-card">
-            <div echarts [options]="processMemChartOption(processHistory())" class="chart"></div>
-          </p-card>
-        </div>
-      }
+  @if (processHistoryLoading()) {
+    <p class="muted">Loading…</p>
+  } @else if (processHistory().length === 0) {
+    <p class="muted">No history for this process in the selected window. It may have started recently or the name changed.</p>
+  } @else {
+    <div class="charts-col">
+      <p-card header="CPU %" styleClass="chart-card">
+        <div echarts [options]="processCpuChartOption()" class="chart"></div>
+      </p-card>
+      <p-card header="Threads" styleClass="chart-card">
+        <div echarts [options]="processThreadsChartOption()" class="chart"></div>
+      </p-card>
+      <p-card header="Memory" styleClass="chart-card">
+        <div echarts [options]="processMemChartOption()" class="chart"></div>
+      </p-card>
     </div>
   }
-</div>
+</p-drawer>
